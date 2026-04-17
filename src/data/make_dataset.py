@@ -17,10 +17,23 @@ def fetch_housing_data(housing_url: str, housing_path: str):
     URL de los datos: "https://github.com/ageron/data/raw/main/housing.tgz"
     Ruta de destino recomendada: "data/raw/"
     """
+    # 1. Crear el directorio si no existe
+    os.makedirs(housing_path, exist_ok=True)
+
+    # 2. Descargar el archivo .tgz
+    tgz_path = os.path.join(housing_path, "housing.tgz")
+    urllib.request.urlretrieve(housing_url, tgz_path)
+    print("✅ Datos descargados correctamente")
+
+    # 3. Extraer el contenido
+    with tarfile.open(tgz_path) as f:
+        f.extractall(housing_path)
+    print("✅ Datos extraídos en:", housing_path)
+
     pass
 
 if __name__ == "__main__":
-    # URL = "https://github.com/ageron/data/raw/main/housing.tgz"
-    # PATH = "data/raw/"
-    # fetch_housing_data(URL, PATH)
-    print("Script para descargar datos... (Falta el código!)")
+    URL = "https://github.com/ageron/data/raw/main/housing.tgz"
+    PATH = "data/raw/"
+    fetch_housing_data(URL, PATH)
+    print("Script completado exitosamente!")

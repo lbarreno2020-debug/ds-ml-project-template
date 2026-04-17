@@ -10,7 +10,7 @@ import pandas as pd
 # Inicializamos la app
 app = FastAPI(title="API de Predicción de Precios de Vivienda (California)", version="1.0")
 
-# INSTRUCCIONES: Define el esquema de datos esperado por la API (Las variables X que usa tu modelo)
+# Esquema de datos esperado por la API
 class HousingFeatures(BaseModel):
     longitude: float
     latitude: float
@@ -20,12 +20,9 @@ class HousingFeatures(BaseModel):
     population: float
     households: float
     median_income: float
-    # Añade cualquier variable categórica o enriquecida que el modelo requiera
-    # ej: ocean_proximity: str 
-    # ej: rooms_per_household: float
+    ocean_proximity: str  # Categórica: INLAND, NEAR BAY, NEAR OCEAN, <1H OCEAN, ISLAND
 
 # Variable global para cargar el modelo
-# IMPORTANTE: Asegúrate de guardar tu modelo en "models/best_model.pkl" o ajusta la ruta
 model = None
 
 @app.on_event("startup")
@@ -35,9 +32,10 @@ def load_model():
     """
     global model
     try:
-        model = joblib.load("models/best_model.pkl")
+        model = joblib.load("models/model.pkl")
+        print("✅ Modelo cargado correctamente")
     except Exception as e:
-        print("Advertencia: No se pudo cargar el modelo. ¿Ya lo entrenaste y guardaste?")
+        print(f"⚠️ No se pudo cargar el modelo: {e}")
 
 @app.get("/")
 def home():
@@ -46,20 +44,35 @@ def home():
 @app.post("/predict")
 def predict_price(features: HousingFeatures):
     """
-    INSTRUCCIONES:
-    1. Convierte el objeto 'features' (Pydantic) a un formato que Scikit-Learn entienda (ej un DataFrame o Array 2D).
-       Toma en cuenta que el modelo en producción espera exactamente las mismas columnas que usaste para entrenar.
-    2. Usa model.predict()
-    3. Retorna la predicción en un diccionario, ej: {"predicted_price": 250000.0}
+    Recibe las características de una vivienda y retorna el precio predicho.
     """
     if model is None:
         return {"error": "El modelo no se ha cargado."}
-    
-    # Tu código aquí para predecir
-    prediction = 0.0 # Reemplazar con model.predict()
-    
-    return {"predicted_price": prediction}
+
+    # 1. Convertir a DataFrame con las mismas columnas del entrenamiento
+    data = pd.DataFrame([{
+        "longitude":          features.longitude,
+        "latitude":           features.latitude,
+        "housing_median_age": features.housing_median_age,
+        "total_rooms":        features.total_rooms,
+        "total_bedrooms":     features.total_bedrooms,
+        "population":         features.population,
+        "households":         features.households,
+        "median_income":      features.median_income,
+        "ocean_proximity":    features.ocean_proximity
+    }])
+
+    # 2. Predecir
+    prediction = model.predict(data)[0]
+
+    # 3. Retornar resultado
+    return {
+        "predicted_price": round(float(prediction), 2),
+        "mensaje": f"El precio estimado de la vivienda es ${prediction:,.2f} USD"
+    }
 
 # Instrucciones para correr la API localmente:
-# En la terminal, ejecuta:
-# uvicorn src.api.main:app --reload
+# 1. Ejecutar en terminal: uvicorn src.api.main:app --reload
+# 2. Pegar: http://127.0.0.1:8000/docs en el buscador
+# En la API, pega los datos de la primera fila del dataset para comparar, cuyo precio real es $452,600, El modelo predijo $448,568.
+# 
